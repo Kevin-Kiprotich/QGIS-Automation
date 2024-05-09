@@ -45,8 +45,10 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingParameterNumber,
                        QgsLayerTreeGroup,
+                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterFolderDestination,
-                       QgsCoordinateReferenceSystem)
+                       QgsCoordinateReferenceSystem
+                       )
 
 try:
     import pandas as pd
@@ -87,8 +89,13 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
     BUFFERSIZE="BUFFER_SIZE"
     ROUTE="ROUTE"
     FOLDER="FOLDER"
+    USECOST="USECOST"
     
-    
+    def evaluateCost(self,cond):
+        if cond:
+            return 'cst'
+        else:
+            return ''
     def create_layer_group(self,layer_group_name):
         #get the layer tree root
         root = QgsProject.instance().layerTreeRoot()
@@ -150,6 +157,14 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.USECOST,
+                self.tr('Use cost'),
+                defaultValue=False
+            )
+        )
+
+        self.addParameter(
             QgsProcessingParameterNumber(
                 self.BUFFERSIZE,
                 self.tr('Buffer size (metres)'),
@@ -194,12 +209,14 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         buffer_size=self.parameterAsDouble(parameters,self.BUFFERSIZE,context)
         excel_file=self.parameterAsSource(parameters,self.CONDITION,context)
         output_folder=self.parameterAsString(parameters,self.FOLDER,context)
-        feedback.reportError(parameters['CONDITION'])
+        feedback.reportError(f"USE COST:\t{parameters['USECOST']}")
         loop_results={}
+
         #Create folders to store all the data that is recieved from the models
         steiner_path=os.path.join(output_folder,'Steiner_routes')
         buffer_path=os.path.join(output_folder,'Buffers')
         activity_space_path=os.path.join(output_folder,'Activity Spaces')
+        csv_path=os.path.join(output_folder,"csvs")
 
         if not os.path.exists(steiner_path):
             os.makedirs(steiner_path)
@@ -207,6 +224,8 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
             os.makedirs(buffer_path)
         if not os.path.exists(activity_space_path):
             os.makedirs(activity_space_path)
+        if not os.path.exists(csv_path):
+            os.makedirs(csv_path)
 
         try:
             df=pd.read_excel(parameters['CONDITION'])
@@ -245,7 +264,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 'GRASS_VECTOR_DSCO': '',
                 'GRASS_VECTOR_EXPORT_NOCAT': False,
                 'GRASS_VECTOR_LCO': '',
-                'acolumn': '',
+                'acolumn': self.evaluateCost(parameters['USECOST']),
                 'arc_type': [0,1],  # line,boundary
                 'input': parameters['ROAD'],
                 'npoints': -1,
@@ -313,6 +332,19 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 outputs['FieldCalculator'] = processing.run('native:fieldcalculator', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['ActivitySpace'] = outputs['FieldCalculator']['OUTPUT']
                 self.addMapLayer(outputs['FieldCalculator']['OUTPUT'],f"Activity_Space_{respondent}")
+
+                # Save vector features to file
+                alg_params = {
+                    'ACTION_ON_EXISTING_FILE': 0,  # Create or overwrite file
+                    'DATASOURCE_OPTIONS': '',
+                    'INPUT': outputs['FieldCalculator']['OUTPUT'],
+                    'LAYER_NAME': '',
+                    'LAYER_OPTIONS': '',
+                    'OUTPUT': os.path.join(csv_path,f"{respondent}.csv")
+                }
+                outputs['SaveVectorFeaturesToFile'] = processing.run('native:savefeatures', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+                results['Csv'] = outputs['SaveVectorFeaturesToFile']['OUTPUT']
+                self.addMapLayer(outputs['SaveVectorFeaturesToFile']['OUTPUT'],f"CSV_{respondent}")
                 loop_results[f"loop{index}"]=results
             return loop_results
 
