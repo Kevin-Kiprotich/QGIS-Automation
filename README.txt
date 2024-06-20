@@ -1,10 +1,10 @@
 Plugin Builder Results
 
 Your plugin UrbanFlo was created in:
-    C:/Users/Kevin/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins\urban_flo
+    C:/Users/user/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins\urban_flo
 
 Your QGIS plugin directory is located at:
-    C:/Users/Kevin/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
+    C:/Users/user/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
 
 What's Next:
 
