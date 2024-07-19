@@ -55,13 +55,16 @@ try:
     import pandas as pd
     import geopandas as gpd
     import openpyxl
+    import chardet
 except ImportError:
     # Install pandas using subprocess
     subprocess.check_call(['pip', 'install', 'pandas'])
     subprocess.check_call(['pip', 'install', 'openpyxl'])
     subprocess.check_call(['pip', 'install', 'geopandas'])
+    subprocess.check_call(['pip', 'install', 'chardet'])
     import pandas as pd
     import geopandas as gpd
+    import chardet
 # finally:
 #     import pandas as pd
 
@@ -386,7 +389,8 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 # Saving the averages to csv a file
                 # print(results['Csv'])
                 try:
-                    dataFrame = pd.read_csv(results['Csv'])
+                    file_details = chardet.detect(results['Csv'].read_bytes())
+                    dataFrame = pd.read_csv(results['Csv'], encoding=file_details['encoding'])
                 except Exception as e:
                     feedback.pushConsoleInfo(f"Error reading CSV file: {e}")
                     return
