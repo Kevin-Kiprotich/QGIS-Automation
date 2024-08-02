@@ -320,7 +320,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 }
                 outputs['Vnetsteiner'] = processing.run('grass7:v.net.steiner', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 # Add the output layer to the map canvas
-                self.addMapLayer(outputs['Vnetsteiner']['output'],f"Route_{respondent}")
                 results['Route']=outputs['Vnetsteiner']['output']
 
                 
@@ -340,7 +339,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
 
                 outputs['Buffer'] = processing.run('native:buffer', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['Buffer'] = outputs['Buffer']['OUTPUT']
-                self.addMapLayer(outputs['Buffer']['OUTPUT'],f"Buffer_{respondent}")
 
                 # Clip
                 alg_params = {
@@ -350,7 +348,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 }
                 outputs['Clip'] = processing.run('native:clip', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 # results['Clip'] = outputs['Clip']['OUTPUT']
-                # self.addMapLayer(outputs['Clip']['OUTPUT'],f"Activity Space{respondent}")
 
                 # Add field to attributes table
                 alg_params = {
@@ -365,7 +362,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 }
                 outputs['AddFieldToAttributesTable'] = processing.run('native:addfieldtoattributestable', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 # results['ActivitySpace']=outputs['AddFieldToAttributesTable']['OUTPUT']
-                # self.addMapLayer(outputs['AddFieldToAttributesTable']['OUTPUT'],f"Activity_Space_{respondent}")
                 alg_params = {
                     'FIELD_LENGTH': 100,
                     'FIELD_NAME': 'RSP_ID',
@@ -377,7 +373,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 }
                 outputs['FieldCalculator'] = processing.run('native:fieldcalculator', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['ActivitySpace'] = outputs['FieldCalculator']['OUTPUT']
-                self.addMapLayer(outputs['FieldCalculator']['OUTPUT'],f"Activity_Space_{respondent}")
 
                 # Save vector features to file
                 alg_params = {
@@ -390,7 +385,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 }
                 outputs['SaveVectorFeaturesToFile'] = processing.run('native:savefeatures', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['Csv'] = outputs['SaveVectorFeaturesToFile']['OUTPUT']
-                self.addMapLayer(outputs['SaveVectorFeaturesToFile']['OUTPUT'],f"CSV_{respondent}")
 
                 # Saving the averages to csv a file
                 # print(results['Csv'])
@@ -473,8 +467,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
             csv_output_path1 = f"{averages_path}/PHASE2_averages.csv"
             tot_csv.to_csv(csv_output_path, index=False)
             avg_csv.to_csv(csv_output_path1, index=False)
-            self.addMapLayer(csv_output_path, "PHASE2_Totals")
-            self.addMapLayer(csv_output_path1, "PHASE2_Averages")
             return loop_results
 
         except Exception as e:
