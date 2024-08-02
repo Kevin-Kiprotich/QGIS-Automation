@@ -34,7 +34,7 @@ import numpy as np
 import csv
 import os
 import processing
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (QgsProcessing,
                        QgsVectorLayer,
                        QgsProject,
@@ -49,6 +49,7 @@ from qgis.core import (QgsProcessing,
                        QgsLayerTreeGroup,
                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterFolderDestination,
+                       QgsProcessingParameterField,
                        QgsCoordinateReferenceSystem
                        )
 
@@ -98,6 +99,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
     ROUTE="ROUTE"
     FOLDER="FOLDER"
     USECOST = "USECOST"
+    USECOST_COLUMN = "USECOST_COLUMN"
 
     def compute_averages(self, df):
         numeric_columns = df.select_dtypes(include=['number']).columns
@@ -115,18 +117,13 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         # totals = {column: df[column].sum() for column in numeric_columns}
         totals = {'X3.7.03.1': df['X3.7.03.1'].sum()}
         return totals
-
-    def evaluateCost(self, cond):
-        if cond:
-            return 'cst'
-        else:
-            return ''
     
     def evaluateCost(self,cond):
         if cond:
             return 'cst'
         else:
             return ''
+    
     def create_layer_group(self,layer_group_name):
         #get the layer tree root
         root = QgsProject.instance().layerTreeRoot()
@@ -192,6 +189,16 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 self.USECOST,
                 self.tr('Use cost'),
                 defaultValue=False
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.USECOST_COLUMN,
+                self.tr('Cost column'),
+                parentLayerParameterName=self.ROAD,
+
+                optional=True
             )
         )
 
@@ -266,6 +273,11 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         if not os.path.exists(totals_path):
             os.makedirs(totals_path)
 
+        if parameters['USECOST']:
+            if not parameters['ROAD']:
+                raise QgsProcessingException(self.tr("Road file is required when 'Use cost' is True"))
+            if not parameters['USECOST_COLUMN']:
+                raise QgsProcessingException(self.tr("Use cost column must be selected when 'Use cost' is True"))
         
 
         try:
