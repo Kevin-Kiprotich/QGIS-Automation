@@ -120,7 +120,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
     
     def evaluateCost(self,cond):
         if cond:
-            return 'cst'
+            return self.USECOST_COLUMN
         else:
             return ''
     
