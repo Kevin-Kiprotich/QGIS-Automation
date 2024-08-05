@@ -112,11 +112,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         return averages
 
     def compute_totals(self, df):
-        # numeric_columns = df.select_dtypes(include=['number']).columns
-        # exclude_columns = ["MEAN_X", "MEAN_Y"]
-        # if exclude_columns:
-        #     numeric_columns = [column for column in numeric_columns if column not in exclude_columns]
-        # totals = {column: df[column].sum() for column in numeric_columns}
         totals = {'X3.7.03.1': df['X3.7.03.1'].sum()}
         return totals
     
@@ -125,22 +120,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
             return self.USECOST_COLUMN
         else:
             return ''
-    
-    def create_layer_group(self,layer_group_name):
-        #get the layer tree root
-        root = QgsProject.instance().layerTreeRoot()
-
-        # Check if the layer group already exists, return it if found
-        existing_group = root.findGroup(layer_group_name)
-        if existing_group is not None:
-            print(f"Layer group '{layer_group_name}' already exists.")
-        else:    
-            # Create a new layer group
-            layer_group = QgsLayerTreeGroup(layer_group_name)
-            
-            # Add the layer group to the layer tree root
-            root.insertChildNode(0, layer_group)
-            print(f"Layer group '{layer_group_name}' created.")
 
     def addMapLayer(self,layer_path,layer_name):
         layer = QgsVectorLayer(layer_path, layer_name, "ogr")
@@ -212,14 +191,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 defaultValue=0.0
             )
         )
-
-        # self.addParameter(
-        #     QgsProcessingParameterString(
-        #         self.SHEET_NAME,
-        #         self.tr('Sheet name'),
-        #         defaultValue='X37-X38-'
-        #     )
-        # )
        
         # get the path to the folder that you will use to store the outputs
         default_folder=os.path.join(os.getenv('USERPROFILE'),'Documents')
@@ -237,22 +208,10 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         # create variables tp hold the outputs
         
         outputs={}
-
-        self.create_layer_group('Buffer')
-        self.create_layer_group('Routes')
-        self.create_layer_group('Activity Space')
-        # self.create_layer_group('Averages')
-        # self.create_layer_group('Totals')
-        # Retrieve the feature source and sink. The 'dest_id' variable is used
-        # to uniquely identify the feature sink, and must be included in the
-        # dictionary returned by the processAlgorithm function.
+        
         segment = self.parameterAsSource(parameters,self.SEGMENT, context)
-        road_network = self.parameterAsSource(parameters,self.ROAD,context)
-        buffer_size=self.parameterAsDouble(parameters,self.BUFFERSIZE,context)
-        excel_file=self.parameterAsSource(parameters,self.CONDITION,context)
         output_folder=self.parameterAsString(parameters,self.FOLDER,context)
         feedback.reportError(f"USE COST:\t{parameters['USECOST']}")
-        loop_results={}
 
         #Create folders to store all the data that is recieved from the models
         steiner_path=os.path.join(output_folder,'Steiner_routes')
@@ -457,88 +416,6 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 }
                 outputs['SaveVectorFeaturesToFile'] = processing.run('native:savefeatures', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['Csv'] = outputs['SaveVectorFeaturesToFile']['OUTPUT']
-
-            #     # Saving the averages to csv a file
-            #     # print(results['Csv'])
-            #     try:
-            #         file_details = chardet.detect(Path(results['Csv']).read_bytes())
-            #         dataFrame = pd.read_csv(results['Csv'], encoding=file_details['encoding'])
-            #     except Exception as e:
-            #         feedback.pushConsoleInfo(f"Error reading CSV file: {e}")
-            #         return
-                
-            #     try:
-            #         averages = self.compute_averages(dataFrame)
-            #         totals = self.compute_totals(dataFrame)
-            #     except Exception as e:
-            #         feedback.pushConsoleInfo(f"Error computing averages and totals: {e}")
-            #         return
-                
-            #     AVG['RSP'].append(respondent)
-            #     TOT['RSP'].append(respondent)
-
-
-            #     if 'X3.7.03.1' in TOT:
-            #         TOT['X3.7.03.1'].append(totals['X3.7.03.1'])
-            #     else:
-            #         feedback.reportError(f"{'X3.7.03.1'} does not exist for {respondent} with Count {count} in totals ")
-            #         none_list = [0] * count
-            #         TOT['X3.7.03.1'] = none_list
-            #         TOT['X3.7.03.1'].append(totals['X3.7.03.1'])
-                
-            #     # for key in totals:
-            #     #     if key in TOT:
-            #     #         feedback.pushConsoleInfo(key)
-            #     #         TOT[key].append(totals[key])
-            #     #         feedback.reportError(f"Copied {key} for {respondent} with count {count}")
-            #     #     else:
-            #     #         feedback.pushConsoleInfo(f"{key} does not exist for {respondent} with Count {count} in totals ")
-            #     #         none_list = [0] * count
-            #     #         TOT[key] = none_list
-            #     #         TOT[key].append(totals[key])
-
-            #     # for key in TOT:
-            #     #     if key not in totals and key != "RSP":
-            #     #         TOT[key].append(0) 
-            #     # count+=1
-                
-
-            #     for key in averages:
-            #         if key in AVG:
-            #             feedback.pushConsoleInfo(key)
-            #             AVG[key].append(averages[key])
-            #         else:
-            #             feedback.pushConsoleInfo(f"{key} does not exist for {respondent} with Count {count} in averages")
-            #             none_list = [0] * count
-            #             AVG[key] = none_list
-            #             AVG[key].append(averages[key])
-
-            #     for key in AVG:
-            #         if key not in averages and key != "RSP":
-            #             AVG[key].append(0)
-            #     count+=1
-
-            #     # # Save the totals to a csv file.
-            #     # data_frame = pd.read_csv(results['Csv'])
-            #     # totals = self.compute_totals(data_frame)
-            #     # TOT['RSP'].append(respondent)
-
-            # # Print the AVG dictionary
-            # print(TOT)
-            # print(AVG)
-            # for key in TOT:
-            #     feedback.reportError(f"{key}:{len(TOT[key])}")
-
-            # for key in AVG:
-            #     feedback.pushConsoleInfo(f"{key}:{len(AVG[key])}")
-
-            # # Save the averages to a CSV file
-            # tot_csv = pd.DataFrame(TOT)
-            # avg_csv = pd.DataFrame(AVG)
-            # csv_output_path = f"{totals_path}/PHASE2_totals.csv"
-            # csv_output_path1 = f"{averages_path}/PHASE2_averages.csv"
-            # tot_csv.to_csv(csv_output_path, index=False)
-            # avg_csv.to_csv(csv_output_path1, index=False)
             
             return results
 

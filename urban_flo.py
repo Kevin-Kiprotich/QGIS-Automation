@@ -26,7 +26,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from qgis.core import QgsApplication
 
-from processing_provider.urban_flo_provider import UrbanFloProvider
+from .processing_provider.urban_flo_provider import UrbanFloProvider
 
 # Initialize Qt resources from file resources.py
 from .resources import *
