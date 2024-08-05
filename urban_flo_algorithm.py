@@ -29,11 +29,13 @@ __copyright__ = '(C) 2024 by George Odero'
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = '$Format:%H$'
+import shutil
 import subprocess
 import numpy as np
 import csv
 import os
 import processing
+from pathlib import Path
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (QgsProcessing,
                        QgsVectorLayer,
@@ -259,6 +261,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         csv_path=os.path.join(output_folder, "csvs")
         averages_path=os.path.join(output_folder, "Averages")
         totals_path=os.path.join(output_folder, "Totals")
+        temporary_path=os.path.join(output_folder, "Temp")
 
         if not os.path.exists(steiner_path):
             os.makedirs(steiner_path)
@@ -272,6 +275,9 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
             os.makedirs(averages_path)
         if not os.path.exists(totals_path):
             os.makedirs(totals_path)
+        if not os.path.exists(temporary_path):
+            os.makedirs(temporary_path)
+        
 
         if parameters['USECOST']:
             if not parameters['ROAD']:
@@ -328,34 +334,88 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 'points': outputs['ExtractByExpression']['OUTPUT'],
                 'terminal_cats': '1-100000',
                 'threshold': 50,
-                'output':  os.path.join(steiner_path,f"{respondent}.shp")
+                'output':  os.path.join(temporary_path, f"{respondent}.shp"),
                 }
                 outputs['Vnetsteiner'] = processing.run('grass7:v.net.steiner', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 # Add the output layer to the map canvas
-                results['Route']=outputs['Vnetsteiner']['output']
+                # results['Route']=outputs['Vnetsteiner']['output']
 
-                
+                feedback.pushConsoleInfo("Steiner path computed successfully")
+                # Add field to attributes table
+                alg_params = {
+                    'FIELD_ALIAS': '',
+                    'FIELD_COMMENT': '',
+                    'FIELD_LENGTH': 75,
+                    'FIELD_NAME': 'RSP_ID',
+                    'FIELD_PRECISION': 0,
+                    'FIELD_TYPE': 2,  # Text (string)
+                    'INPUT': outputs['Vnetsteiner']['output'],
+                    'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                }
+                outputs['AddFieldToAttributesTable_ROUTE'] = processing.run('native:addfieldtoattributestable', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+                # results['ActivitySpace']=outputs['AddFieldToAttributesTable']['OUTPUT']
+                alg_params = {
+                    'FIELD_LENGTH': 100,
+                    'FIELD_NAME': 'RSP_ID',
+                    'FIELD_PRECISION': 0,
+                    'FIELD_TYPE': 2,  # Text (string)
+                    'FORMULA': f"'{rspid}'",
+                    'INPUT': outputs['AddFieldToAttributesTable_ROUTE']['OUTPUT'],
+                    'OUTPUT': os.path.join(steiner_path,f"{respondent}.shp")
+                }
+                outputs['FieldCalculator_ROUTE'] = processing.run('native:fieldcalculator', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+
+                feedback.pushConsoleInfo("Steiner Attribute added")
 
                 #BUFFERING
                 alg_params = {
                     'DISSOLVE': True,
                     'DISTANCE': parameters["BUFFER_SIZE"],
                     'END_CAP_STYLE': 0,  # Round
-                    'INPUT': outputs['Vnetsteiner']['output'],
+                    'INPUT': outputs['FieldCalculator_ROUTE']['OUTPUT'],
                     'JOIN_STYLE': 0,  # Round
                     'MITER_LIMIT': 2,
                     'SEGMENTS': 5,
                     'SEPARATE_DISJOINT': False,
-                    'OUTPUT': os.path.join(buffer_path,f"{respondent}.shp")
+                    'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
                 }
 
                 outputs['Buffer'] = processing.run('native:buffer', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['Buffer'] = outputs['Buffer']['OUTPUT']
 
+                feedback.pushConsoleInfo("Buffer created")
+
+
+                # Add field to attributes table
+                alg_params = {
+                    'FIELD_ALIAS': '',
+                    'FIELD_COMMENT': '',
+                    'FIELD_LENGTH': 75,
+                    'FIELD_NAME': 'RSP_ID',
+                    'FIELD_PRECISION': 0,
+                    'FIELD_TYPE': 2,  # Text (string)
+                    'INPUT': outputs['Buffer']['OUTPUT'],
+                    'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                }
+                outputs['AddFieldToAttributesTable_BUFFER'] = processing.run('native:addfieldtoattributestable', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+                # results['ActivitySpace']=outputs['AddFieldToAttributesTable']['OUTPUT']
+                alg_params = {
+                    'FIELD_LENGTH': 100,
+                    'FIELD_NAME': 'RSP_ID',
+                    'FIELD_PRECISION': 0,
+                    'FIELD_TYPE': 2,  # Text (string)
+                    'FORMULA': f"'{rspid}'",
+                    'INPUT': outputs['AddFieldToAttributesTable_BUFFER']['OUTPUT'],
+                    'OUTPUT': os.path.join(buffer_path,f"{respondent}.shp")
+                }
+                outputs['FieldCalculator_BUFFER'] = processing.run('native:fieldcalculator', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+
+                feedback.pushConsoleInfo("Buffer attribute added")
+
                 # Clip
                 alg_params = {
                     'INPUT': parameters['SEGMENT'],
-                    'OVERLAY': outputs['Buffer']['OUTPUT'],
+                    'OVERLAY': outputs['FieldCalculator_BUFFER']['OUTPUT'],
                     'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
                 }
                 outputs['Clip'] = processing.run('native:clip', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
@@ -398,88 +458,89 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 outputs['SaveVectorFeaturesToFile'] = processing.run('native:savefeatures', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 results['Csv'] = outputs['SaveVectorFeaturesToFile']['OUTPUT']
 
-                # Saving the averages to csv a file
-                # print(results['Csv'])
-                try:
-                    file_details = chardet.detect(results['Csv'].read_bytes())
-                    dataFrame = pd.read_csv(results['Csv'], encoding=file_details['encoding'])
-                except Exception as e:
-                    feedback.pushConsoleInfo(f"Error reading CSV file: {e}")
-                    return
+            #     # Saving the averages to csv a file
+            #     # print(results['Csv'])
+            #     try:
+            #         file_details = chardet.detect(Path(results['Csv']).read_bytes())
+            #         dataFrame = pd.read_csv(results['Csv'], encoding=file_details['encoding'])
+            #     except Exception as e:
+            #         feedback.pushConsoleInfo(f"Error reading CSV file: {e}")
+            #         return
                 
-                try:
-                    averages = self.compute_averages(dataFrame)
-                    totals = self.compute_totals(dataFrame)
-                except Exception as e:
-                    feedback.pushConsoleInfo(f"Error computing averages and totals: {e}")
-                    return
+            #     try:
+            #         averages = self.compute_averages(dataFrame)
+            #         totals = self.compute_totals(dataFrame)
+            #     except Exception as e:
+            #         feedback.pushConsoleInfo(f"Error computing averages and totals: {e}")
+            #         return
                 
-                AVG['RSP'].append(respondent)
-                TOT['RSP'].append(respondent)
+            #     AVG['RSP'].append(respondent)
+            #     TOT['RSP'].append(respondent)
 
 
-                if 'X3.7.03.1' in TOT:
-                    TOT['X3.7.03.1'].append(totals['X3.7.03.1'])
-                else:
-                    feedback.reportError(f"{'X3.7.03.1'} does not exist for {respondent} with Count {count} in totals ")
-                    none_list = [0] * count
-                    TOT['X3.7.03.1'] = none_list
-                    TOT['X3.7.03.1'].append(totals['X3.7.03.1'])
+            #     if 'X3.7.03.1' in TOT:
+            #         TOT['X3.7.03.1'].append(totals['X3.7.03.1'])
+            #     else:
+            #         feedback.reportError(f"{'X3.7.03.1'} does not exist for {respondent} with Count {count} in totals ")
+            #         none_list = [0] * count
+            #         TOT['X3.7.03.1'] = none_list
+            #         TOT['X3.7.03.1'].append(totals['X3.7.03.1'])
                 
-                # for key in totals:
-                #     if key in TOT:
-                #         feedback.pushConsoleInfo(key)
-                #         TOT[key].append(totals[key])
-                #         feedback.reportError(f"Copied {key} for {respondent} with count {count}")
-                #     else:
-                #         feedback.pushConsoleInfo(f"{key} does not exist for {respondent} with Count {count} in totals ")
-                #         none_list = [0] * count
-                #         TOT[key] = none_list
-                #         TOT[key].append(totals[key])
+            #     # for key in totals:
+            #     #     if key in TOT:
+            #     #         feedback.pushConsoleInfo(key)
+            #     #         TOT[key].append(totals[key])
+            #     #         feedback.reportError(f"Copied {key} for {respondent} with count {count}")
+            #     #     else:
+            #     #         feedback.pushConsoleInfo(f"{key} does not exist for {respondent} with Count {count} in totals ")
+            #     #         none_list = [0] * count
+            #     #         TOT[key] = none_list
+            #     #         TOT[key].append(totals[key])
 
-                # for key in TOT:
-                #     if key not in totals and key != "RSP":
-                #         TOT[key].append(0) 
-                # count+=1
+            #     # for key in TOT:
+            #     #     if key not in totals and key != "RSP":
+            #     #         TOT[key].append(0) 
+            #     # count+=1
                 
 
-                for key in averages:
-                    if key in AVG:
-                        feedback.pushConsoleInfo(key)
-                        AVG[key].append(averages[key])
-                    else:
-                        feedback.pushConsoleInfo(f"{key} does not exist for {respondent} with Count {count} in averages")
-                        none_list = [0] * count
-                        AVG[key] = none_list
-                        AVG[key].append(averages[key])
+            #     for key in averages:
+            #         if key in AVG:
+            #             feedback.pushConsoleInfo(key)
+            #             AVG[key].append(averages[key])
+            #         else:
+            #             feedback.pushConsoleInfo(f"{key} does not exist for {respondent} with Count {count} in averages")
+            #             none_list = [0] * count
+            #             AVG[key] = none_list
+            #             AVG[key].append(averages[key])
 
-                for key in AVG:
-                    if key not in averages and key != "RSP":
-                        AVG[key].append(0)
-                count+=1
+            #     for key in AVG:
+            #         if key not in averages and key != "RSP":
+            #             AVG[key].append(0)
+            #     count+=1
 
-                # # Save the totals to a csv file.
-                # data_frame = pd.read_csv(results['Csv'])
-                # totals = self.compute_totals(data_frame)
-                # TOT['RSP'].append(respondent)
+            #     # # Save the totals to a csv file.
+            #     # data_frame = pd.read_csv(results['Csv'])
+            #     # totals = self.compute_totals(data_frame)
+            #     # TOT['RSP'].append(respondent)
 
-            # Print the AVG dictionary
-            print(TOT)
-            print(AVG)
-            for key in TOT:
-                feedback.reportError(f"{key}:{len(TOT[key])}")
+            # # Print the AVG dictionary
+            # print(TOT)
+            # print(AVG)
+            # for key in TOT:
+            #     feedback.reportError(f"{key}:{len(TOT[key])}")
 
-            for key in AVG:
-                feedback.pushConsoleInfo(f"{key}:{len(AVG[key])}")
+            # for key in AVG:
+            #     feedback.pushConsoleInfo(f"{key}:{len(AVG[key])}")
 
-            # Save the averages to a CSV file
-            tot_csv = pd.DataFrame(TOT)
-            avg_csv = pd.DataFrame(AVG)
-            csv_output_path = f"{totals_path}/PHASE2_totals.csv"
-            csv_output_path1 = f"{averages_path}/PHASE2_averages.csv"
-            tot_csv.to_csv(csv_output_path, index=False)
-            avg_csv.to_csv(csv_output_path1, index=False)
-            return loop_results
+            # # Save the averages to a CSV file
+            # tot_csv = pd.DataFrame(TOT)
+            # avg_csv = pd.DataFrame(AVG)
+            # csv_output_path = f"{totals_path}/PHASE2_totals.csv"
+            # csv_output_path1 = f"{averages_path}/PHASE2_averages.csv"
+            # tot_csv.to_csv(csv_output_path, index=False)
+            # avg_csv.to_csv(csv_output_path1, index=False)
+            
+            return results
 
         except Exception as e:
             feedback.reportError('Error reading file:{}'.format(e))
