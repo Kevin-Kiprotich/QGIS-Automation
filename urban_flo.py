@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox, QFileDialog
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QFileDialog,QApplication
 from qgis.core import QgsApplication
 
 from .processing_provider.urban_flo_provider import UrbanFloProvider
@@ -202,7 +202,7 @@ class UrbanFlo:
         if use == 'in':
             self.dlg.CSVFolderLineEdit.setText(outputdir)
         else:
-            self.dlg.outputFolderLineEdit.setText(outputdir)
+            self.dlg.OutputFolderLineEdit.setText(outputdir)
     
     def getSheet(self):
         options = QFileDialog.Options()
@@ -213,17 +213,19 @@ class UrbanFlo:
             "Excel Files (*.xlsx *.xls);;All Files (*)",
             options=options
         )
-        self.dlg.EvaluationsheetLineEdit.setText(filePath)
+        self.dlg.EvaluationSheetLineEdit.setText(filePath)
 
     def getSheetNames(self):
         if self.dlg.EvaluationSheetLineEdit.text() == "":
             return
         
         try:
-            df = pd.read_excel(self.dlg.EvaluationSheetLineEdit.text())
-            sheet_names = df.sheet_names
+            df = pd.ExcelFile(self.dlg.EvaluationSheetLineEdit.text())
+            sheet_names = list(df.sheet_names)
+            print(sheet_names)
             self.dlg.SheetNameComboBox.clear()
             self.dlg.SheetNameComboBox.addItems(sheet_names)
+            
         except Exception as e:
             self.showErrorMessage(f"Error reading Evaluation Sheet: {str(e)}")
             self.dlg.SheetNameComboBox.clear()

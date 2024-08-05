@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>538</width>
-    <height>391</height>
+    <height>392</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -339,13 +339,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QgsFieldComboBox" name="SheetNameComboBox">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
+     <widget class="QComboBox" name="SheetNameComboBox">
       <property name="minimumSize">
        <size>
         <width>0</width>
@@ -357,13 +351,6 @@
    </layout>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QgsFieldComboBox</class>
-   <extends>QComboBox</extends>
-   <header>qgsfieldcombobox.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections>
   <connection>
