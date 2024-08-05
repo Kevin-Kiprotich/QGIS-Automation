@@ -196,7 +196,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="EvaluationSheetPowerButton">
+       <widget class="QPushButton" name="EvaluationSheetPushButton">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -275,7 +275,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="OutputPowerButton">
+       <widget class="QPushButton" name="OutputPushButton">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>

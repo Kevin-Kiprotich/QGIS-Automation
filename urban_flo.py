@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QFileDialog
 from qgis.core import QgsApplication
 
 from .processing_provider.urban_flo_provider import UrbanFloProvider
@@ -33,6 +33,7 @@ from .resources import *
 # Import the code for the dialog
 from .urban_flo_dialog import UrbanFloDialog
 import os.path
+import pandas as pd
 
 
 class UrbanFlo:
@@ -189,22 +190,58 @@ class UrbanFlo:
             self.iface.removeToolBarIcon(action)
         QgsApplication.processingRegistry().removeProvider(self.provider)
 
+    def showErrorMessage(self,message):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("Error")
+        msg_box.setText(message)
+        msg_box.exec_()
+    
+    def getFolder(self, use):
+        outputdir = QFileDialog.getExistingDirectory(None,"Select a folder","")
+        if use == 'in':
+            self.dlg.CSVFolderLineEdit.setText(outputdir)
+        else:
+            self.dlg.outputFolderLineEdit.setText(outputdir)
+    
+    def getSheet(self):
+        options = QFileDialog.Options()
+        filePath, _ = QFileDialog.getOpenFileName(
+            None,
+            "Select an Excel file",
+            "",
+            "Excel Files (*.xlsx *.xls);;All Files (*)",
+            options=options
+        )
+        self.dlg.EvaluationsheetLineEdit.setText(filePath)
 
+    def getSheetNames(self):
+        if self.dlg.EvaluationSheetLineEdit.text() == "":
+            return
+        
+        try:
+            df = pd.read_excel(self.dlg.EvaluationSheetLineEdit.text())
+            sheet_names = df.sheet_names
+            self.dlg.SheetNameComboBox.clear()
+            self.dlg.SheetNameComboBox.addItems(sheet_names)
+        except Exception as e:
+            self.showErrorMessage(f"Error reading Evaluation Sheet: {str(e)}")
+            self.dlg.SheetNameComboBox.clear()
+
+    
     def run(self):
         """Run method that performs all the real work"""
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start == True:
+        if self.first_start:
             self.first_start = False
             self.dlg = UrbanFloDialog()
+            self.dlg.CSVFolderPushButton.clicked.connect(lambda: self.getFolder('in'))
+            self.dlg.EvaluationSheetPushButton.clicked.connect(self.getSheet)
+            self.dlg.EvaluationSheetLineEdit.textChanged.connect(self.getSheetNames)
+            self.dlg.OutputPushButton.clicked.connect(lambda: self.getFolder('out'))
 
         # show the dialog
         self.dlg.show()
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
+        
