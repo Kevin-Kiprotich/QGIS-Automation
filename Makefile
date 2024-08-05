@@ -1,9 +1,9 @@
 #/***************************************************************************
 # UrbanFlo
 #
-# This plugin automates activity space creation
+# This plugin runs computations on the phase 2 of Urban flo
 #							 -------------------
-#		begin				: 2024-04-29
+#		begin				: 2024-08-05
 #		git sha				: $Format:%H$
 #		copyright			: (C) 2024 by Kevin Kiprotich
 #		email				: kevinkiprotich0089@gmail.com
@@ -38,21 +38,21 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	urban_flo.py 
+	urban_flo.py urban_flo_dialog.py
 
 PLUGINNAME = urban_flo
 
 PY_FILES = \
 	__init__.py \
-	urban_flo.py 
+	urban_flo.py urban_flo_dialog.py
 
-UI_FILES = 
+UI_FILES = urban_flo_dialog_base.ui
 
-EXTRAS = metadata.txt 
+EXTRAS = metadata.txt icon.png
 
 EXTRA_DIRS =
 
-COMPILED_RESOURCE_FILES = 
+COMPILED_RESOURCE_FILES = resources.py
 
 PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
 
@@ -65,7 +65,7 @@ PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
 #	* Windows:
 #	  AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins'
 
-QGISDIR=C:\Users\Kevin\AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
+QGISDIR=C:\Users\Locate04\AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
 
 #################################################
 # Normally you would not need to edit below here
@@ -75,7 +75,7 @@ HELP = help/build/html
 
 PLUGIN_UPLOAD = $(c)/plugin_upload.py
 
-RESOURCE_SRC=$(shell grep '^ *<file'  | sed 's@</file>@@g;s/.*>//g' | tr '\n' ' ')
+RESOURCE_SRC=$(shell grep '^ *<file' resources.qrc | sed 's@</file>@@g;s/.*>//g' | tr '\n' ' ')
 
 .PHONY: default
 default:
