@@ -103,17 +103,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
     USECOST = "USECOST"
     USECOST_COLUMN = "USECOST_COLUMN"
 
-    def compute_averages(self, df):
-        numeric_columns = df.select_dtypes(include=['number']).columns
-        exclude_columns = ["MEAN_X", "MEAN_Y"]
-        if exclude_columns:
-            numeric_columns = [column for column in numeric_columns if column not in exclude_columns]
-        averages = {column: df[column].mean() for column in numeric_columns}
-        return averages
-
-    def compute_totals(self, df):
-        totals = {'X3.7.03.1': df['X3.7.03.1'].sum()}
-        return totals
+    
     
     def evaluateCost(self,cond):
         if cond:

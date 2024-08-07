@@ -27,7 +27,7 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox, QFileDialog,QApplication
 from qgis.core import QgsApplication
 
 from .processing_provider.urban_flo_provider import UrbanFloProvider
-
+from .phase2_functions import process, showErrorMessage
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
@@ -189,20 +189,13 @@ class UrbanFlo:
                 action)
             self.iface.removeToolBarIcon(action)
         QgsApplication.processingRegistry().removeProvider(self.provider)
-
-    def showErrorMessage(self,message):
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
-        msg_box.setWindowTitle("Error")
-        msg_box.setText(message)
-        msg_box.exec_()
     
     def getFolder(self, use):
         outputdir = QFileDialog.getExistingDirectory(None,"Select a folder","")
         if use == 'in':
             self.dlg.CSVFolderLineEdit.setText(outputdir)
         else:
-            self.dlg.OutputFolderLineEdit.setText(outputdir)
+            self.dlg.OutputLineEdit.setText(outputdir)
     
     def getSheet(self):
         options = QFileDialog.Options()
@@ -227,7 +220,7 @@ class UrbanFlo:
             self.dlg.SheetNameComboBox.addItems(sheet_names)
             
         except Exception as e:
-            self.showErrorMessage(f"Error reading Evaluation Sheet: {str(e)}")
+            showErrorMessage(f"Error reading Evaluation Sheet: {str(e)}")
             self.dlg.SheetNameComboBox.clear()
 
     
@@ -239,6 +232,8 @@ class UrbanFlo:
         if self.first_start:
             self.first_start = False
             self.dlg = UrbanFloDialog()
+            self.dlg.button_box.accepted.disconnect()
+            self.dlg.button_box.accepted.connect(lambda: process(self.dlg))
             self.dlg.CSVFolderPushButton.clicked.connect(lambda: self.getFolder('in'))
             self.dlg.EvaluationSheetPushButton.clicked.connect(self.getSheet)
             self.dlg.EvaluationSheetLineEdit.textChanged.connect(self.getSheetNames)
