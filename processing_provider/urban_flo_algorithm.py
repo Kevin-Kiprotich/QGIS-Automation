@@ -35,6 +35,7 @@ import numpy as np
 import csv
 import os
 import processing
+import gc
 from pathlib import Path
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (QgsProcessing,
@@ -412,6 +413,15 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
         except Exception as e:
             feedback.reportError('Error reading file:{}'.format(e))
             return {}
+        
+        finally:
+            # Explicitly delete variables to release memory
+            del outputs, segment, output_folder, steiner_path, buffer_path
+            del activity_space_path, csv_path, averages_path, totals_path, temporary_path
+            del df, AVG, TOT, results, respondent, rspid, segments, segment_list
+            del sql_query, expression, alg_params
+            
+            gc.collect()
         
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
