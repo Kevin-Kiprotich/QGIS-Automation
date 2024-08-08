@@ -38,13 +38,24 @@ def process(dlg):
         try:
             evSheet = pd.read_excel(evaluationSheet, sheet_name=sheetName)
             avgColumns = evSheet['Analysis Column Code'].where((evSheet['Function code']=='A') | (evSheet['Function code']=='A , T'))
-            totalsColumns = evSheet['Analysis Column Code'].where((evSheet['Function code']=='A , T'))
+            totalsColumns = evSheet['Analysis Column Code'].where((evSheet['Function code']=='A , T')|(evSheet['Function code']=='T'))
+            countsColumns = list(evSheet['Analysis Column Code'].where((evSheet['Function code']=='C')))
+            additionalCountsColumns = evSheet['Latent_Metric_Code'].where((evSheet['Function code']=='C'))
+            for item in additionalCountsColumns:
+                if item in countsColumns:
+                    continue
+                else:
+                    countsColumns.append(item)
+                    
+            
             cleanedAvgColumns = [x for x in list(avgColumns) if not (isinstance(x, float) and math.isnan(x))]
             cleanedTotalsColumns = [x for x in list(totalsColumns) if not (isinstance(x, float) and math.isnan(x))]
+            cleanedCountsColumns = [x for x in list(countsColumns) if not (isinstance(x, float) and math.isnan(x))]
             if csvFiles:
                 try:
                     averagesDF = pd.DataFrame()
                     totalsDF = pd.DataFrame()
+                    countsDF = pd.DataFrame()
                     count = 0
                     for csvFile in csvFiles:
                         detectedFile=chardet.detect(Path(csvFile).read_bytes())
@@ -54,11 +65,18 @@ def process(dlg):
                         finalAvgColumns.insert(0,'RSP_ID')
                         finalTotalsColumns = [item for item in cleanedTotalsColumns if item in df.columns]
                         finalTotalsColumns.insert(0,'RSP_ID')
+                        finalCountsColumns = [item for item in cleanedCountsColumns if item in df.columns]
+                        finalCountsColumns.insert(0,'RSP_ID')
                         
                         totals = {}
                         averages = {}
+                        counts = {}
+                        
+                        
                         averages['RSP_ID']=df['RSP_ID'].iloc[0]
                         totals['RSP_ID'] = df['RSP_ID'].iloc[0]
+                        counts['RSP_ID'] = df['RSP_ID'].iloc[0]
+                        
                         
                         # Compute averages
                         for item in finalAvgColumns:
@@ -80,6 +98,33 @@ def process(dlg):
                             except TypeError as e:
                                 totals[item]='Invalid data type'
                         
+                        
+                        #Compute counts
+                        for item in finalCountsColumns:
+                            try:
+                                if item=='RSP_ID':
+                                    continue
+                                else:
+                                    countsValue={}
+                                    for value in df[item]:
+                                        if isinstance(value, float) and math.isnan(value):
+                                            continue
+                                        else:
+                                            value = value.lower()
+                                            responses = str(value).split(',')
+                                            for response in responses:
+                                                response = response.lstrip()
+                                                response = response.rstrip()
+                                                try:
+                                                    countsValue[response] += responses.count(response)
+                                                except KeyError as e:
+                                                    print(e)
+                                                    countsValue[response] = 1
+                                    counts[item] = str(countsValue)
+                                    
+                            except Exception as e:
+                                showErrorMessage(str(e))
+                                
                         # Save averages to dataframe
                         if len(averagesDF.columns) != 0:  
                             averagesDF.loc[len(averagesDF.index)]=averages
@@ -93,12 +138,20 @@ def process(dlg):
                         else:
                             for key in totals.keys():
                                 totalsDF[key]=totals[key]
+                                
+                        #Save counts to dataframe
+                        if len(countsDF.columns)!=0:  
+                            countsDF.loc[len(countsDF.index)]=counts
+                        else:
+                            for key in counts.keys():
+                                countsDF[key]=counts[key]
                         
                         count +=1
                         dlg.progressBar.setValue(int((count/len(csvFiles))*100))
                     # Save computations to file  
                     averagesDF.to_csv(f"{outputFolder}/Averages.csv")
                     totalsDF.to_csv(f"{outputFolder}/Totals.csv")
+                    countsDF.to_csv(f"{outputFolder}/Counts.csv")
                 except FileNotFoundError as e:
                     print('Error found')
             else:
