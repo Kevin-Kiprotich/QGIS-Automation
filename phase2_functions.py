@@ -129,29 +129,29 @@ def process(dlg):
                         if len(averagesDF.columns) != 0:  
                             averagesDF.loc[len(averagesDF.index)]=averages
                         else:
-                            for key in averages.keys():
-                                averagesDF[key]=averages[key]
+                            temp_df = pd.DataFrame([averages])
+                            averagesDF = pd.concat([averagesDF, temp_df], ignore_index=True)
 
                         #Save totals to dataframe
                         if len(totalsDF.columns) != 0:  
                             totalsDF.loc[len(totalsDF.index)]=totals
                         else:
-                            for key in totals.keys():
-                                totalsDF[key]=totals[key]
+                            temp_df = pd.DataFrame([totals])
+                            totalsDF=pd.concat([totalsDF, temp_df], ignore_index=True)
                                 
                         #Save counts to dataframe
                         if len(countsDF.columns)!=0:  
                             countsDF.loc[len(countsDF.index)]=counts
                         else:
-                            for key in counts.keys():
-                                countsDF[key]=counts[key]
+                            temp_df = pd.DataFrame([counts])
+                            countsDF = pd.concat([countsDF, temp_df], ignore_index=True)
                         
                         count +=1
                         dlg.progressBar.setValue(int((count/len(csvFiles))*100))
                     # Save computations to file  
-                    averagesDF.to_csv(f"{outputFolder}/Averages.csv")
-                    totalsDF.to_csv(f"{outputFolder}/Totals.csv")
-                    countsDF.to_csv(f"{outputFolder}/Counts.csv")
+                    averagesDF.to_excel(f"{outputFolder}/Averages.xlsx",index=False)
+                    totalsDF.to_excel(f"{outputFolder}/Totals.xlsx",index=False)
+                    countsDF.to_excel(f"{outputFolder}/Counts.xlsx",index=False)
                 except FileNotFoundError as e:
                     print('Error found')
             else:
