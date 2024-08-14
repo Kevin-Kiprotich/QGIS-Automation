@@ -152,6 +152,7 @@ def process(dlg):
                     averagesDF.to_excel(f"{outputFolder}/Averages.xlsx",index=False)
                     totalsDF.to_excel(f"{outputFolder}/Totals.xlsx",index=False)
                     countsDF.to_excel(f"{outputFolder}/Counts.xlsx",index=False)
+                    
                 except FileNotFoundError as e:
                     print('Error found')
             else:

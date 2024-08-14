@@ -106,11 +106,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
 
     
     
-    def evaluateCost(self,cond):
-        if cond:
-            return self.USECOST_COLUMN
-        else:
-            return ''
+    
 
     def addMapLayer(self,layer_path,layer_name):
         layer = QgsVectorLayer(layer_path, layer_name, "ogr")
@@ -234,7 +230,12 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 raise QgsProcessingException(self.tr("Road file is required when 'Use cost' is True"))
             if not parameters['USECOST_COLUMN']:
                 raise QgsProcessingException(self.tr("Use cost column must be selected when 'Use cost' is True"))
-        
+            
+        def evaluateCost(cond):
+            if cond:
+                return parameters['USECOST_COLUMN']
+            else:
+                return ''
 
         try:
             df=pd.read_excel(parameters['CONDITION'])
@@ -266,7 +267,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 'INPUT': parameters['SEGMENT'],
                 'OUTPUT':QgsProcessing.TEMPORARY_OUTPUT  # creating new selection
                 }
-
+                feedback.pushConsoleInfo(parameters['USECOST_COLUMN'])
                 outputs['ExtractByExpression'] = processing.run('native:extractbyexpression', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
                 alg_params = {
                 '-g': False,
@@ -277,7 +278,7 @@ class UrbanFloAlgorithm(QgsProcessingAlgorithm):
                 'GRASS_VECTOR_DSCO': '',
                 'GRASS_VECTOR_EXPORT_NOCAT': False,
                 'GRASS_VECTOR_LCO': '',
-                'acolumn': self.evaluateCost(parameters['USECOST']),
+                'acolumn': evaluateCost(parameters['USECOST']),
                 'arc_type': [0,1],  # line,boundary
                 'input': parameters['ROAD'],
                 'npoints': -1,
